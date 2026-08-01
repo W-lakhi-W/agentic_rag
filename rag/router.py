@@ -15,3 +15,51 @@ async def ingest_pdf(
 ):
 
    return await controller.ingest_pdf(files, db, current_user)
+
+@rag_routes.post("/query")
+async def query_pdf(
+    query: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await controller.query_pdf(query, db, current_user)
+
+@rag_routes.post("/chat")
+async def new_chat(
+    title: str = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await controller.new_chat(title, db, current_user)
+
+@rag_routes.post("/chat/{chat_id}")
+async def send_message(
+    chat_id: int,
+    message: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await controller.send_message(chat_id, message, db, current_user)
+
+@rag_routes.get("/chat/{chat_id}")
+async def get_chat(
+    chat_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await controller.get_chat(chat_id, db, current_user)
+
+@rag_routes.get("/chats")
+async def get_all_chats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await controller.get_all_chats(db, current_user)
+
+@rag_routes.delete("/chat/{chat_id}")
+async def delete_chat(
+    chat_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await controller.delete_chat(chat_id, db, current_user)

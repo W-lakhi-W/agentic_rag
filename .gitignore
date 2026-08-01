@@ -10,3 +10,4 @@ wheels/
 .venv
 storage
 chroma_db
+.env

@@ -1,1 +1,1 @@
-from rag.models import Document
+from rag.models import Document,Chat,Message
