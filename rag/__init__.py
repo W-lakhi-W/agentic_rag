@@ -1,0 +1,1 @@
+from rag.models import Document
