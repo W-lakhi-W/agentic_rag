@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from fastapi import UploadFile
 from auth.models import User
-from rag.models import Chat
+from rag.models import Chat, Document
 from rag.Ingesting.upload_pdf import upload_pdfs
 from rag.Ingesting.loader import load_pdf
 from rag.Ingesting.splitter import split_documents
@@ -100,3 +100,24 @@ async def delete_chat(
     db.delete(chat)
     db.commit()
     return {"message": "Chat deleted successfully."}
+
+async def delete_document(
+    document_id: int,
+    db: Session,
+    current_user: User,
+):
+    # Assuming you have a Document model and a relationship with User
+    document = db.query(Document).filter(Document.id == document_id, Document.user_id == current_user.id).first()
+    if not document:
+        return {"error": "Document not found or you do not have permission to delete it."}
+    
+    db.delete(document)
+    db.commit()
+    return {"message": "Document deleted successfully."}
+
+async def get_all_documents(
+    db: Session,
+    current_user: User,
+):
+    documents = db.query(Document).filter(Document.user_id == current_user.id).all()
+    return {"documents": documents}

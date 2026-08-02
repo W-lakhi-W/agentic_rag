@@ -55,3 +55,18 @@ async def delete_chat(
     current_user: User = Depends(get_current_user),
 ):
     return await controller.delete_chat(chat_id, db, current_user)
+
+@rag_routes.get("/documents")
+async def get_all_documents(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await controller.get_all_documents(db, current_user)
+
+@rag_routes.delete("/document/{document_id}")
+async def delete_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await controller.delete_document(document_id, db, current_user)
