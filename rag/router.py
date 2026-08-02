@@ -13,16 +13,8 @@ async def ingest_pdf(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
    return await controller.ingest_pdf(files, db, current_user)
 
-@rag_routes.post("/query")
-async def query_pdf(
-    query: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return await controller.query_pdf(query, db, current_user)
 
 @rag_routes.post("/chat")
 async def new_chat(

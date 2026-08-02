@@ -5,12 +5,11 @@ from rag.models import Chat
 from rag.Ingesting.upload_pdf import upload_pdfs
 from rag.Ingesting.loader import load_pdf
 from rag.Ingesting.splitter import split_documents
-from rag.vectordb import vector_db
 from rag.query.create_chat import create_chat
 from rag.query.save_message import save_message
 from rag.query.retrive_chat_history import get_chat_history
-from rag.llm import model
-from rag.prompt import prompt
+from rag.llm import agent, extract_agent_response_content
+from rag.vectordb import vector_db
 
 
 
@@ -40,15 +39,6 @@ async def ingest_pdf(
     return {"message": "PDFs ingested and stored successfully."}
     
 
-async def query_pdf(
-    query: str,
-    db: Session,
-    current_user: User,
-):
-    results = vector_db.similarity_search(query, k=20)
-    
-    return {"message": f"Query received: {query}", "results": results}
-
 async def new_chat(
     title: str,
     db: Session,
@@ -56,12 +46,15 @@ async def new_chat(
 ):
     new_chat = create_chat(db, current_user.id, title)
     save_message(db, new_chat.id, "user", content=new_chat.title)
-    chat_history = get_chat_history(db, new_chat.id)
-    prompt_message = prompt.invoke({"question": title, "chat_history": chat_history})
-    model_response = model.invoke(prompt_message)
-    save_message(db, new_chat.id, "assistant", content=model_response.content)
+    chat_history = get_chat_history(db, new_chat.id, current_user.id)
+    agent_response = await agent.ainvoke(
+        {"messages": chat_history},
+        context={"user_id": current_user.id},
+    )
+    response_content = extract_agent_response_content(agent_response)
+    save_message(db, new_chat.id, "assistant", content=response_content)
 
-    return {"message": model_response}
+    return {"message": response_content}
 
 async def send_message(
     chat_id: int,
@@ -70,12 +63,15 @@ async def send_message(
     current_user: User,
 ):
     save_message(db, chat_id, "user", content=message)
-    chat_history = get_chat_history(db, chat_id)
-    prompt_message = prompt.invoke({"question": message, "chat_history": chat_history})
-    model_response = model.invoke(prompt_message)
-    save_message(db, chat_id, "assistant", content=model_response.content)
+    chat_history = get_chat_history(db, chat_id, current_user.id)
+    agent_response = await agent.ainvoke(
+        {"messages": chat_history},
+        context={"user_id": current_user.id},
+    )
+    response_content = extract_agent_response_content(agent_response)
+    save_message(db, chat_id, "assistant", content=response_content)
 
-    return {"message": model_response}
+    return {"message": response_content}
 
 async def get_chat(
     chat_id: int,
