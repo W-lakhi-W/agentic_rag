@@ -45,3 +45,19 @@ def get_chat_history(
         for msg in history
     ]
     return conversation
+
+def get_chat_messages(
+    db: Session,
+    chat_id: int,
+    user_id: int,
+):
+    return (
+        db.query(Message)
+        .join(Chat, Message.chat_id == Chat.id)
+        .filter(
+            Chat.id == chat_id,
+            Chat.user_id == user_id,
+        )
+        .order_by(Message.created_at.asc())
+        .all()
+    )

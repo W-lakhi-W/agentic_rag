@@ -45,7 +45,6 @@ async def upload_pdfs(
             user_id=current_user.id,
             filename=file.filename,
             file_path=str(file_path),
-            status="PENDING",
         )
 
         db.add(document)

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException, status
 from auth.models import User
 from rag.models import Chat, Document
 from rag.Ingesting.upload_pdf import upload_pdfs
@@ -7,10 +7,10 @@ from rag.Ingesting.loader import load_pdf
 from rag.Ingesting.splitter import split_documents
 from rag.query.create_chat import create_chat
 from rag.query.save_message import save_message
-from rag.query.retrive_chat_history import get_chat_history
+from rag.query.retrive_chat_history import get_chat_history, get_chat_messages
 from rag.llm import agent, extract_agent_response_content
 from rag.vectordb import vector_db
-
+from fastapi.responses import FileResponse
 
 
 async def ingest_pdf(
@@ -28,16 +28,18 @@ async def ingest_pdf(
         chunks = split_documents(documents_content)
 
         for chunk in chunks:
-            chunk.metadata.update({
-                "user_id": current_user.id,
-                "document_id": document["document_id"],
-                "filename": document["filename"],
-            })
+            chunk.metadata.update(
+                {
+                    "user_id": current_user.id,
+                    "document_id": document["document_id"],
+                    "filename": document["filename"],
+                }
+            )
         all_chunks.extend(chunks)
 
     vector_db.add_documents(all_chunks)
     return {"message": "PDFs ingested and stored successfully."}
-    
+
 
 async def new_chat(
     title: str,
@@ -56,6 +58,7 @@ async def new_chat(
 
     return {"message": response_content}
 
+
 async def send_message(
     chat_id: int,
     message: str,
@@ -71,15 +74,22 @@ async def send_message(
     response_content = extract_agent_response_content(agent_response)
     save_message(db, chat_id, "assistant", content=response_content)
 
-    return {"message": response_content}
+    return {
+        "message": {
+            "role": "assistant",
+            "content": response_content,
+        }
+    }
+
 
 async def get_chat(
     chat_id: int,
     db: Session,
     current_user: User,
 ):
-    chat_history = get_chat_history(db, chat_id, current_user.id)
+    chat_history = get_chat_messages(db, chat_id, current_user.id)
     return {"chat_history": chat_history}
+
 
 async def get_all_chats(
     db: Session,
@@ -88,18 +98,24 @@ async def get_all_chats(
     chats = db.query(Chat).filter(Chat.user_id == current_user.id).all()
     return {"chats": chats}
 
+
 async def delete_chat(
     chat_id: int,
     db: Session,
     current_user: User,
 ):
-    chat = db.query(Chat).filter(Chat.id == chat_id, Chat.user_id == current_user.id).first()
+    chat = (
+        db.query(Chat)
+        .filter(Chat.id == chat_id, Chat.user_id == current_user.id)
+        .first()
+    )
     if not chat:
         return {"error": "Chat not found or you do not have permission to delete it."}
-    
+
     db.delete(chat)
     db.commit()
     return {"message": "Chat deleted successfully."}
+
 
 async def delete_document(
     document_id: int,
@@ -107,13 +123,20 @@ async def delete_document(
     current_user: User,
 ):
     # Assuming you have a Document model and a relationship with User
-    document = db.query(Document).filter(Document.id == document_id, Document.user_id == current_user.id).first()
+    document = (
+        db.query(Document)
+        .filter(Document.id == document_id, Document.user_id == current_user.id)
+        .first()
+    )
     if not document:
-        return {"error": "Document not found or you do not have permission to delete it."}
-    
+        return {
+            "error": "Document not found or you do not have permission to delete it."
+        }
+
     db.delete(document)
     db.commit()
     return {"message": "Document deleted successfully."}
+
 
 async def get_all_documents(
     db: Session,
@@ -121,3 +144,30 @@ async def get_all_documents(
 ):
     documents = db.query(Document).filter(Document.user_id == current_user.id).all()
     return {"documents": documents}
+
+
+async def view_document(
+    document_id: int,
+    db: Session,
+    current_user: User,
+):
+    document = (
+        db.query(Document)
+        .filter(
+            Document.id == document_id,
+            Document.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found or you do not have permission to view it.",
+        )
+
+    return FileResponse(
+        path=document.file_path,
+        media_type="application/pdf",
+        filename=document.filename,
+    )

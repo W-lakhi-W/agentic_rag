@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from rag import controller
 from auth.security import get_current_user, get_db
 from auth.models import User
+from rag.schemas import SendMessageRequest
 
 
 rag_routes = APIRouter(prefix="/api")
@@ -27,11 +28,11 @@ async def new_chat(
 @rag_routes.post("/chat/{chat_id}")
 async def send_message(
     chat_id: int,
-    message: str,
+    body: SendMessageRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await controller.send_message(chat_id, message, db, current_user)
+    return await controller.send_message(chat_id, body.message, db, current_user)
 
 @rag_routes.get("/chat/{chat_id}")
 async def get_chat(
@@ -63,10 +64,18 @@ async def get_all_documents(
 ):
     return await controller.get_all_documents(db, current_user)
 
-@rag_routes.delete("/document/{document_id}")
+@rag_routes.delete("/documents/{document_id}")
 async def delete_document(
     document_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     return await controller.delete_document(document_id, db, current_user)
+
+@rag_routes.get("/documents/{document_id}")
+async def view_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await controller.view_document(document_id, db, current_user)
