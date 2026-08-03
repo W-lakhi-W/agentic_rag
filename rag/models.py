@@ -32,13 +32,6 @@ class Document(Base):
     # Storage path
     file_path = Column(Text, nullable=False)
 
-    # Ingestion status
-    status = Column(
-        String(20),
-        nullable=False,
-        default="PENDING",
-    )
-    # PENDING | PROCESSING | COMPLETED | FAILED
 
     created_at = Column(
         DateTime(timezone=True),
