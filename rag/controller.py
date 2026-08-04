@@ -56,7 +56,13 @@ async def new_chat(
     response_content = extract_agent_response_content(agent_response)
     save_message(db, new_chat.id, "assistant", content=response_content)
 
-    return {"message": response_content}
+    return {
+            "message": {
+                "role": "assistant",
+                "content": response_content,
+                "chat_id": new_chat.id
+            }
+        }
 
 
 async def send_message(
