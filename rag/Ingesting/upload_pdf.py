@@ -8,7 +8,7 @@ from auth.db import get_db
 from auth.security import get_current_user
 from rag.models import Document
 from auth.models import User
-from rag.config import UPLOAD_DIR
+from rag.config import UPLOAD_DIR, MAX_FILES
 
 
 
@@ -17,6 +17,13 @@ async def upload_pdfs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
+    if len(files) > MAX_FILES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"You can upload a maximum of {MAX_FILES} PDF files at a time."
+        )
+    
     uploaded_documents = []
 
     for file in files:
